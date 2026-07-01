@@ -1,0 +1,64 @@
+# ============================================================================
+# docker-compose.prod.yml — Production Override
+# ============================================================================
+# Usage:
+#   docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# This override file:
+#   - Switches all services to production Dockerfiles (multi-stage builds)
+#   - Removes dev volume mounts (code is baked into images)
+#   - Sets production environment variables
+#   - Frontend serves on port 80 via nginx instead of Vite dev server
+# ============================================================================
+
+services:
+  # --------------------------------------------------------------------------
+  # MongoDB — production hardening
+  # --------------------------------------------------------------------------
+  mongodb:
+    restart: always
+    # In production, don't expose MongoDB to the host machine
+    ports: !reset []
+
+  # --------------------------------------------------------------------------
+  # Backend API — production build
+  # --------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    # Override: remove dev volume mounts (code is baked into the image)
+    volumes: []
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - MONGO_URI=mongodb://mongodb:27017/smart-fin-tracker
+      - ML_SERVICE_URL=http://ml-service:8000
+      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
+
+  # --------------------------------------------------------------------------
+  # ML Service — production build with multi-worker uvicorn
+  # --------------------------------------------------------------------------
+  ml-service:
+    build:
+      context: ./ml-service
+      dockerfile: Dockerfile.prod
+    # Override: remove dev volume mounts
+    volumes:
+      - ml_models:/app/models
+    environment:
+      - PORT=8000
+      - ENVIRONMENT=production
+
+  # --------------------------------------------------------------------------
+  # Frontend — nginx serving static build (port 80)
+  # --------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    # Override: remove dev volume mounts
+    volumes: []
+    # Serve on standard HTTP port in production
+    ports:
+      - "80:80"

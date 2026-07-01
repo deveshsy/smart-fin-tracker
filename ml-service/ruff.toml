@@ -1,0 +1,42 @@
+# ============================================================================
+# Ruff — Python Linter Configuration for ML Service
+# ============================================================================
+# Ruff is an extremely fast Python linter (written in Rust) that replaces
+# flake8, isort, and pyupgrade in a single tool.
+# Docs: https://docs.astral.sh/ruff/
+# ============================================================================
+
+# Maximum line length (slightly wider than PEP 8's 79 for modern screens)
+line-length = 100
+
+# Target Python version — matches our Dockerfile and CI
+target-version = "py310"
+
+# Directories to treat as first-party source (for import sorting)
+src = ["."]
+
+# --------------- Lint Rule Selection ---------------
+[lint]
+select = [
+  "E",   # pycodestyle errors (indentation, whitespace, etc.)
+  "F",   # pyflakes (unused imports, undefined names, etc.)
+  "W",   # pycodestyle warnings (trailing whitespace, etc.)
+  "I",   # isort (import ordering and grouping)
+  "UP",  # pyupgrade (modernize syntax for target Python version)
+  "B",   # flake8-bugbear (common bug patterns and design problems)
+]
+
+# Rules to ignore (pragmatic exceptions)
+ignore = [
+  "E501",  # line-too-long — already handled by line-length setting
+]
+
+# --------------- Import Sorting (isort) ---------------
+[lint.isort]
+# Ensure known first-party imports are grouped correctly
+known-first-party = ["main"]
+
+# --------------- Files to Exclude ---------------
+[lint.per-file-ignores]
+# Allow unused imports in __init__.py (common for re-exports)
+"__init__.py" = ["F401"]

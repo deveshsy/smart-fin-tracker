@@ -1,0 +1,129 @@
+# ============================================================================
+# docker-compose.yml — Development Configuration
+# ============================================================================
+# Orchestrates 4 services: MongoDB, Node.js Backend, Python ML Service,
+# and React Frontend. Optimized for local development with:
+#   - Bind-mount volumes for hot-reloading (no rebuilds on code changes)
+#   - Health checks for dependency readiness
+#   - Restart policies for resilience
+# ============================================================================
+
+
+services:
+  # --------------------------------------------------------------------------
+  # MongoDB — Persistent document database
+  # --------------------------------------------------------------------------
+  mongodb:
+    image: mongo:latest
+    container_name: fintech-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - fintech-network
+    restart: unless-stopped
+    # Health check: verify mongod is accepting connections
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # --------------------------------------------------------------------------
+  # Backend — Node.js / Express API
+  # --------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fintech-backend
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=development
+      - MONGO_URI=mongodb://mongodb:27017/smart-fin-tracker
+      - ML_SERVICE_URL=http://ml-service:8000
+      - JWT_SECRET=${JWT_SECRET:-dev-secret-do-not-use-in-production}
+    volumes:
+      # Bind-mount source code for hot-reloading via nodemon
+      - ./backend/src:/app/src
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - fintech-network
+    restart: unless-stopped
+    # Health check: verify the API is responding
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # --------------------------------------------------------------------------
+  # ML Service — Python / FastAPI classification engine
+  # --------------------------------------------------------------------------
+  ml-service:
+    build:
+      context: ./ml-service
+      dockerfile: Dockerfile
+    container_name: fintech-ml-service
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - ENVIRONMENT=development
+    volumes:
+      # Bind-mount source for hot-reloading (uvicorn --reload)
+      - ./ml-service:/app
+      # Named volume for trained models (persists across container restarts)
+      - ml_models:/app/models
+    networks:
+      - fintech-network
+    restart: unless-stopped
+    # Health check: verify the ML service is responding
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # --------------------------------------------------------------------------
+  # Frontend — React / Vite development server
+  # --------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: fintech-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      # Bind-mount source for Vite HMR (Hot Module Replacement)
+      - ./frontend/src:/app/src
+    depends_on:
+      - backend
+    networks:
+      - fintech-network
+    restart: unless-stopped
+
+# ============================================================================
+# Named Volumes
+# ============================================================================
+volumes:
+  # Persistent MongoDB data directory
+  mongodb_data:
+  # Persistent ML model storage (survives container rebuilds)
+  ml_models:
+
+# ============================================================================
+# Networks
+# ============================================================================
+networks:
+  fintech-network:
+    driver: bridge

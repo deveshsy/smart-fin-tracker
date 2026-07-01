@@ -1,0 +1,47 @@
+# ============================================================================
+# Backend — Production Dockerfile (Multi-Stage)
+# ============================================================================
+# Stage 1: Install dependencies in a full Node image
+# Stage 2: Copy only production deps + source into a slim alpine image
+# Result: Smaller image, no devDependencies, no build tools
+# ============================================================================
+
+# --------------- Stage 1: Dependency Installation ---------------
+FROM node:18-alpine AS deps
+
+WORKDIR /app
+
+# Copy package manifests first to leverage Docker layer caching.
+# Dependencies are only re-installed when package files change.
+COPY package*.json ./
+
+# Install production-only dependencies (no devDeps like nodemon)
+RUN npm ci --omit=dev
+
+# --------------- Stage 2: Production Runtime ---------------
+FROM node:18-alpine AS runtime
+
+WORKDIR /app
+
+# Create a non-root user for security best practices
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+# Copy production node_modules from the deps stage
+COPY --from=deps /app/node_modules ./node_modules
+
+# Copy application source code
+COPY package*.json ./
+COPY src ./src
+
+# Expose the backend API port
+EXPOSE 3000
+
+# Switch to non-root user
+USER appuser
+
+# Health check — verify the API responds on /api/health
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
+
+# Start the production server directly with node (no nodemon)
+CMD ["node", "src/server.js"]
