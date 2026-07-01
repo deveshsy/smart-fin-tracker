@@ -51,9 +51,15 @@ app.use('/api/transactions', transactionRoutes);
 app.use(errorHandler);
 
 // ---------- Start Server ----------
-const server = app.listen(PORT, () => {
-  console.log(`Backend server running on port ${PORT}`);
-});
+// Only bind to the port if this file is run directly (not imported by tests).
+// This prevents EADDRINUSE conflicts when Jest imports the app.
+let server;
+if (process.env.NODE_ENV !== 'test') {
+  server = app.listen(PORT, () => {
+    console.log(`Backend server running on port ${PORT}`);
+  });
+}
 
-// Export app and server for testing
+// Export app for supertest and server for graceful shutdown
 module.exports = { app, server };
+

@@ -55,7 +55,7 @@ afterAll(async () => {
   await User.deleteMany({});
   await Transaction.deleteMany({});
   await mongoose.connection.close();
-  server.close();
+  if (server) server.close();
 });
 
 describe('Transaction Routes — Unauthenticated', () => {

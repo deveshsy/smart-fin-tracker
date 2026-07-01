@@ -1,239 +1,300 @@
-# Smart FinTech Tracker — Micro-Monorepo
+<p align="center">
+  <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white" />
+  <img src="https://img.shields.io/badge/Node.js-18+-339933?logo=node.js&logoColor=white" />
+  <img src="https://img.shields.io/badge/FastAPI-0.111-009688?logo=fastapi&logoColor=white" />
+  <img src="https://img.shields.io/badge/MongoDB-7-47A248?logo=mongodb&logoColor=white" />
+  <img src="https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white" />
+  <img src="https://img.shields.io/badge/scikit--learn-1.5-F7931E?logo=scikit-learn&logoColor=white" />
+  <img src="https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white" />
+  <img src="https://img.shields.io/badge/Tests-33_Passing-brightgreen?logo=checkmarx&logoColor=white" />
+</p>
 
-[![CI Pipeline](https://github.com/<your-username>/smart-fin-tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/<your-username>/smart-fin-tracker/actions/workflows/ci.yml)
+# 💰 Smart FinTech Tracker
 
-A high-performance, professional-grade financial tracking system organized as a monorepo. This application integrates a React frontend, a Node.js + Express API backend, and a Python FastAPI Machine Learning service for automated transaction categorization.
+> An AI-powered financial tracking system built as a production-grade **micro-monorepo**. Features JWT authentication, real-time ML transaction categorization, interactive dashboards, and full Docker orchestration.
 
-## 🏗️ Architectural Overview
+---
 
-The application follows a decoupled microservices architecture orchestrating 4 primary containers:
+## 🎬 What It Does
+
+1. **Register / Login** → JWT-secured auth with bcrypt password hashing
+2. **Add a transaction** → Describe it (e.g. "Uber ride downtown") and optionally leave category blank
+3. **AI auto-categorizes** → The Python ML service classifies it in real-time using TF-IDF + Naive Bayes
+4. **Dashboard updates** → KPI cards, donut chart, bar chart, and filterable ledger update instantly
+5. **Data is user-scoped** → Each user sees only their own financial data
+
+---
+
+## 🏗️ Architecture
 
 ```text
-                     ┌───────────────────┐
-                     │   React Frontend  │ (Vite / Tailwind CSS v4)
-                     └─────────┬─────────┘
-                               │ (REST API)
-                               ▼
-                     ┌───────────────────┐
-                     │  Node.js Backend  │ (Express / Mongoose)
-                     └────┬──────────┬───┘
-                          │          │
-             (MongoDB)    │          │ (REST API)
-             ┌────────────▼──┐       ▼
-             │  MongoDB Database │  ┌───────────────────┐
-             └───────────────┘      │    ML Service     │ (Python / FastAPI)
-                                    │ (Naive Bayes /    │
-                                    │  TF-IDF Classify) │
-                                    └───────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                        Docker Compose                           │
+│                     (fintech-network bridge)                    │
+│                                                                 │
+│  ┌──────────────┐   REST    ┌──────────────┐   REST    ┌──────────────┐
+│  │   Frontend   │ ───────→  │   Backend    │ ───────→  │  ML Service  │
+│  │  React/Vite  │           │  Express.js  │           │   FastAPI    │
+│  │  Tailwind v4 │           │  Mongoose    │           │  scikit-learn│
+│  │  Recharts    │           │  JWT Auth    │           │  TF-IDF/NB   │
+│  │  port: 5173  │           │  port: 3000  │           │  port: 8000  │
+│  └──────────────┘           └──────┬───────┘           └──────────────┘
+│                                    │                                    │
+│                              ┌─────▼─────┐                             │
+│                              │  MongoDB   │                             │
+│                              │ port:27017 │                             │
+│                              └───────────┘                              │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-- **Frontend (`/frontend`)**: Built with React, Vite, Tailwind CSS v4, Lucide Icons, and Recharts. Exposes port `5173`.
-- **Backend (`/backend`)**: Node.js & Express API acting as the central hub and schema layer. Exposes port `3000`.
-- **ML Service (`/ml-service`)**: Python + FastAPI hosting a Multinomial Naive Bayes text classification model trained on startup to categorize transaction descriptions in real-time. Exposes port `8000`.
-- **Database (`mongodb`)**: Persistent MongoDB instance for storing financial ledger data. Exposes port `27017`.
+### Why This Architecture?
+
+| Principle | Implementation |
+|-----------|----------------|
+| **Separation of Concerns** | ML logic (Python) is fully decoupled from web logic (Node.js) |
+| **Independent Scalability** | Each service can be scaled, redeployed, or upgraded independently |
+| **Unified Development** | `docker-compose up` launches the entire ecosystem in seconds |
+| **Production Parity** | Dev and prod configs share the same base; `Dockerfile.prod` adds multi-stage builds |
+
+---
+
+## 📁 Project Structure
+
+```text
+smart-fin-tracker/
+├── frontend/                          # React + Vite + Tailwind CSS v4
+│   ├── src/
+│   │   ├── components/                # 7 reusable UI components
+│   │   │   ├── Header.jsx             # Navbar with health badges + logout
+│   │   │   ├── KpiCards.jsx           # Balance / Income / Expense cards
+│   │   │   ├── TransactionForm.jsx    # Add transaction with AI hint
+│   │   │   ├── TransactionList.jsx    # Scrollable ledger with badges
+│   │   │   ├── Filters.jsx           # Search + type + category filters
+│   │   │   └── charts/
+│   │   │       ├── CategoryPieChart.jsx
+│   │   │       └── FlowBarChart.jsx
+│   │   ├── context/AuthContext.jsx    # JWT auth state (React Context)
+│   │   ├── pages/
+│   │   │   ├── AuthPage.jsx           # Login / Register (toggle)
+│   │   │   └── Dashboard.jsx          # Main dashboard orchestrator
+│   │   ├── services/api.js            # Axios instance + interceptors
+│   │   └── constants.js               # Category colors & shared data
+│   ├── Dockerfile / Dockerfile.prod   # Dev (Vite HMR) / Prod (nginx)
+│   └── nginx.conf                     # SPA routing + gzip + caching
+│
+├── backend/                           # Node.js + Express (MVC)
+│   ├── src/
+│   │   ├── config/db.js               # Mongoose connection
+│   │   ├── models/
+│   │   │   ├── User.js                # User schema + bcrypt hooks
+│   │   │   └── Transaction.js         # Transaction schema (user-scoped)
+│   │   ├── middleware/
+│   │   │   ├── auth.js                # JWT Bearer verification
+│   │   │   ├── validate.js            # express-validator chains
+│   │   │   └── errorHandler.js        # Centralized error responses
+│   │   ├── routes/
+│   │   │   ├── auth.js                # POST /register, /login, GET /me
+│   │   │   └── transactions.js        # Full CRUD + ML auto-categorization
+│   │   ├── utils/generateToken.js     # JWT signing helper
+│   │   └── __tests__/                 # 20 Jest integration tests
+│   ├── Dockerfile / Dockerfile.prod   # Dev (nodemon) / Prod (multi-stage)
+│   ├── .eslintrc.json / .prettierrc   # Code quality configs
+│   └── jest.config.js
+│
+├── ml-service/                        # Python + FastAPI + scikit-learn
+│   ├── main.py                        # 75-sample classifier, 5 endpoints
+│   ├── tests/                         # 13 pytest test cases
+│   ├── Dockerfile / Dockerfile.prod   # Dev / Prod (4 uvicorn workers)
+│   ├── pyproject.toml                 # Project metadata
+│   └── ruff.toml                      # Python linting
+│
+├── docker-compose.yml                 # Dev (hot-reload + health checks)
+├── docker-compose.prod.yml            # Production override
+├── Makefile                           # 12 convenience commands
+└── .gitignore
+```
 
 ---
 
 ## ⚡ Quick Start
 
-Ensure you have **Docker** and **Docker Compose** installed on your system.
+### Prerequisites
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (includes Docker Compose)
 
-### Running with Makefile
-Convenience shortcuts are available in the root `Makefile`:
-
-```bash
-# Start all services in the background
-make up
-
-# Start and immediately tail logs (recommended for development)
-make dev
-
-# Check status of all containers
-make ps
-
-# Tail live application logs
-make logs
-
-# Stop all services
-make down
-
-# Clean all volumes and containers
-make clean
-```
-
-### Running with Docker Compose directly
-If you do not have `make` installed:
+### Launch
 
 ```bash
-# Build and run containers
-docker-compose up -d --build
-
-# Shutdown containers
-docker-compose down -v
+git clone https://github.com/deveshsy/smart-fin-tracker.git
+cd smart-fin-tracker
+make up        # builds + starts all 4 containers
+make logs      # (optional) tail live logs
 ```
 
-Once running, navigate to [http://localhost:5173](http://localhost:5173) in your browser to access the FinTech Dashboard.
+Open **http://localhost:5173** → Register an account → Start tracking!
+
+### All Make Commands
+
+| Command | Description |
+|---------|-------------|
+| `make up` | Start all services in background |
+| `make dev` | Start + tail logs (recommended) |
+| `make down` | Stop all services |
+| `make restart` | Down + Up |
+| `make logs` | Follow live container logs |
+| `make ps` | Show container status |
+| `make build` | Rebuild all images |
+| `make clean` | Remove containers + volumes |
+| `make test-all` | Run backend + ML tests |
+| `make test-backend` | Run Jest tests only |
+| `make test-ml` | Run pytest tests only |
+| `make lint` | Lint all services |
+| `make prod` | Start production stack |
+| `make prod-down` | Stop production stack |
+
+---
+
+## 🔌 API Reference
+
+### Auth Endpoints (`/api/auth`)
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `POST` | `/api/auth/register` | ✗ | Create account → returns JWT |
+| `POST` | `/api/auth/login` | ✗ | Login → returns JWT |
+| `GET` | `/api/auth/me` | ✓ | Get authenticated user profile |
+
+### Transaction Endpoints (`/api/transactions`)
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `GET` | `/api/transactions` | ✓ | List user's transactions (sorted by date) |
+| `POST` | `/api/transactions` | ✓ | Create transaction (AI categorizes if no category) |
+| `PUT` | `/api/transactions/:id` | ✓ | Update a transaction |
+| `DELETE` | `/api/transactions/:id` | ✓ | Delete a transaction |
+
+### ML Service Endpoints (`:8000`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/health` | Service status + model state |
+| `GET` | `/categories` | List all known categories |
+| `POST` | `/predict` | Classify a single description |
+| `POST` | `/batch-predict` | Classify multiple descriptions |
+| `POST` | `/retrain` | Retrain model with new labeled data |
+
+<details>
+<summary><b>Example: ML Prediction Request</b></summary>
+
+```bash
+curl -X POST http://localhost:8000/predict \
+  -H "Content-Type: application/json" \
+  -d '{"description": "netflix monthly subscription"}'
+```
+
+```json
+{
+  "description": "netflix monthly subscription",
+  "category": "Entertainment",
+  "confidence": 0.8767
+}
+```
+</details>
+
+---
+
+## 🧠 ML Classification Model
+
+**Algorithm:** TF-IDF Vectorizer → Multinomial Naive Bayes Pipeline
+
+**Training Data:** 75 labeled samples across 7 categories:
+
+| Category | Examples | Color |
+|----------|----------|-------|
+| 🍽️ Food & Dining | Starbucks, McDonald's, UberEats, Whole Foods | `#f59e0b` |
+| 🔌 Utilities | Electric bill, Comcast, Verizon phone | `#3b82f6` |
+| 🚗 Transport | Uber, Lyft, Chevron gas, Metro transit | `#8b5cf6` |
+| 🎬 Entertainment | Netflix, Spotify, Steam, AMC theaters | `#ec4899` |
+| 🛍️ Shopping | Amazon, Target, Nike, Best Buy | `#f97316` |
+| 🏥 Healthcare | CVS pharmacy, Dr. appointment, dental | `#14b8a6` |
+| 💰 Income | Salary, freelance invoice, dividends | `#10b981` |
+
+**Persistence:** Model is saved to disk via `joblib`. On container restart it loads from cache instead of retraining. The `/retrain` endpoint accepts new labeled data to improve accuracy.
+
+**Confidence Threshold:** Predictions below 25% confidence are automatically labeled `Uncategorized`.
 
 ---
 
 ## 🧪 Testing
 
-Run the full test suite across all services:
+**33 automated tests** across 2 services:
+
+| Service | Framework | Tests | Coverage |
+|---------|-----------|-------|----------|
+| Backend | Jest + Supertest | 20 | Auth (8) + Transactions (12) |
+| ML Service | pytest + httpx | 13 | All 5 endpoints + edge cases |
 
 ```bash
-# Run all tests (backend + ML service)
+# Run everything
 make test-all
 
-# Run only backend tests
-make test-backend
-
-# Run only ML service tests
-make test-ml
-```
-
-### Linting
-
-```bash
-# Lint all services (ESLint, Ruff, oxlint)
-make lint
+# Individual suites
+make test-backend   # Jest integration tests
+make test-ml        # pytest test suite
 ```
 
 ---
 
-## 🔄 CI/CD Pipeline
+## 🔒 Security Features
 
-This project includes a GitHub Actions CI/CD pipeline (`.github/workflows/ci.yml`) that runs automatically on:
-- Every push to `main` / `master`
-- Every pull request targeting `main` / `master`
-
-The pipeline runs **4 parallel jobs**:
-
-| Job | Description |
-|-----|-------------|
-| **Backend Tests** | Installs Node 18 deps, runs `npm test` |
-| **ML Tests** | Installs Python 3.10 deps, runs `pytest` |
-| **Frontend Build** | Installs deps, verifies `npm run build` succeeds |
-| **Docker Build** | Runs `docker compose build` to verify all Dockerfiles |
+- **JWT Authentication** — Token-based auth with 30-day expiry via `jsonwebtoken`
+- **Password Hashing** — bcrypt with automatic salt rounds via `bcryptjs`
+- **User-Scoped Data** — MongoDB queries filter by authenticated user ID
+- **Input Validation** — `express-validator` chains on all endpoints
+- **Auto-Logout** — Axios interceptor clears tokens on 401 responses
+- **Production Hardening** — Non-root Docker users, unexposed DB ports, health checks
 
 ---
 
 ## 🚀 Production Deployment
 
-Each service has a production-optimized `Dockerfile.prod` with multi-stage builds:
-
 ```bash
-# Build and start the production stack
+# Build and start production stack
 make prod
 
-# Or use docker-compose directly
-docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
-
-# Stop the production stack
-make prod-down
+# Uses multi-stage Dockerfiles:
+# - Frontend: Vite build → nginx:alpine (~25MB image)
+# - Backend: Node.js without devDependencies
+# - ML Service: uvicorn with 4 workers
 ```
-
-**Production differences:**
-- **Backend**: Runs with `node` directly (no nodemon), production-only dependencies
-- **ML Service**: Runs uvicorn with `--workers 4` for concurrency
-- **Frontend**: Static assets served by nginx on port `80` (no Vite dev server)
-- **All services**: Non-root users, health checks, smaller images via multi-stage builds
-- **MongoDB**: Port not exposed to host for security
 
 ### Environment Variables
 
-Set these before deploying to production:
-
-| Variable | Service | Description |
-|----------|---------|-------------|
-| `JWT_SECRET` | Backend | Secret key for JWT token signing |
-| `MONGO_URI` | Backend | MongoDB connection string |
-| `NODE_ENV` | Backend | Set to `production` |
-| `ML_SERVICE_URL` | Backend | Internal URL to ML service |
+| Variable | Service | Description | Required |
+|----------|---------|-------------|----------|
+| `JWT_SECRET` | Backend | JWT signing secret | ✓ |
+| `MONGO_URI` | Backend | MongoDB connection string | ✓ |
+| `NODE_ENV` | Backend | Set to `production` | ✓ |
+| `ML_SERVICE_URL` | Backend | Internal URL to ML service | ✓ |
 
 ---
 
-## 🛠️ Development Workflow
+## 🛠️ Tech Stack
 
-### Local Setup (Without Docker)
-
-```bash
-# Install all dependencies for local development
-make setup
-```
-
-This runs `npm install` in both the backend and frontend directories, and `pip install -r requirements.txt` in the ml-service directory.
-
-### With Docker (Recommended)
-
-```bash
-# 1. Start all services with hot-reloading
-make dev
-
-# 2. Edit source code — changes are reflected automatically:
-#    - Backend: nodemon watches ./backend/src/
-#    - Frontend: Vite HMR watches ./frontend/src/
-#    - ML Service: source is bind-mounted at ./ml-service/
-
-# 3. Run tests
-make test-all
-
-# 4. Lint your code
-make lint
-
-# 5. Stop when done
-make down
-```
-
-### Project Structure
-
-```
-smart-fin-tracker/
-├── .github/workflows/ci.yml    # CI/CD pipeline
-├── docker-compose.yml           # Development orchestration
-├── docker-compose.prod.yml      # Production overrides
-├── Makefile                     # Developer shortcuts
-├── backend/
-│   ├── Dockerfile               # Dev image (nodemon)
-│   ├── Dockerfile.prod          # Prod image (multi-stage)
-│   ├── .eslintrc.json           # ESLint config
-│   ├── .prettierrc              # Prettier config
-│   └── src/                     # Express API source
-├── ml-service/
-│   ├── Dockerfile               # Dev image
-│   ├── Dockerfile.prod          # Prod image (multi-stage)
-│   ├── ruff.toml                # Python linter config
-│   └── main.py                  # FastAPI application
-└── frontend/
-    ├── Dockerfile               # Dev image (Vite)
-    ├── Dockerfile.prod          # Prod image (nginx)
-    ├── nginx.conf               # Nginx SPA config
-    └── src/                     # React application source
-```
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| **Frontend** | React 19, Vite 8, Tailwind CSS v4 | SPA with HMR |
+| **UI Components** | Lucide React, Recharts | Icons + data visualization |
+| **Backend** | Node.js, Express 4, Mongoose 8 | REST API + ORM |
+| **Auth** | jsonwebtoken, bcryptjs | JWT + password hashing |
+| **Validation** | express-validator | Request body validation |
+| **ML** | FastAPI, scikit-learn, pandas | Text classification API |
+| **Database** | MongoDB 7 | Document storage |
+| **DevOps** | Docker Compose, GitHub Actions | Container orchestration + CI |
+| **Linting** | ESLint + Prettier, Ruff, oxlint | Code quality |
+| **Testing** | Jest + Supertest, pytest + httpx | Integration tests |
 
 ---
 
-## 🔌 API Documentation
+## 📄 License
 
-### Node.js Backend API (`http://localhost:3000`)
-- `GET /api/health` — Checks API health status.
-- `GET /api/transactions` — Retrieves all transactions, ordered chronologically.
-- `POST /api/transactions` — Creates a new transaction. If `category` is omitted, it automatically requests a prediction from the ML service.
-- `DELETE /api/transactions/:id` — Deletes a transaction by database ID.
-
-### Python FastAPI ML Service (`http://localhost:8000`)
-- `GET /health` — Checks ML service and model training state.
-- `POST /predict` — Evaluates a text description and returns the predicted category and model confidence.
-  - **Request Body**: `{ "description": "netflix monthly subscription" }`
-  - **Response Body**: `{ "description": "netflix monthly subscription", "category": "Entertainment", "confidence": 0.856 }`
-
----
-
-## 🧠 ML Categorization Model
-The Machine Learning service automatically categorizes standard business transactions into:
-- 🍽️ **Food & Dining** (e.g., Starbucks, McDonald's, UberEats)
-- 🔌 **Utilities** (e.g., electricity, water, Comcast, Verizon)
-- 🚗 **Transport** (e.g., Uber, Lyft, Chevron, Subway)
-- 🎬 **Entertainment** (e.g., Netflix, Spotify, Steam)
-- 💰 **Income** (e.g., Salary, Invoice, Dividend)
-
-If the confidence score drops below 25%, the model marks the transaction as `Uncategorized`.
+MIT — free to use, modify, and distribute.

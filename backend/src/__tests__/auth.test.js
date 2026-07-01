@@ -39,7 +39,7 @@ afterAll(async () => {
   // Clean up test data and close connections
   await User.deleteMany({});
   await mongoose.connection.close();
-  server.close();
+  if (server) server.close();
 });
 
 describe('POST /api/auth/register', () => {
