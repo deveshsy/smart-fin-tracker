@@ -13,6 +13,13 @@
 
 > An AI-powered financial tracking system built as a production-grade **micro-monorepo**. Features JWT authentication, real-time ML transaction categorization, interactive dashboards, and full Docker orchestration.
 
+## 📺 Demo Video
+To see the tracker, automated ML categorization, and interactive charts in action, watch the walkthrough:
+
+https://github.com/deveshsy/smart-fin-tracker/assets/demo.mov
+
+*(You can find the raw video file at [docs/demo.mov](file:///Users/dsy/desktop/dwsim/smart-fin-tracker/docs/demo.mov))*
+
 ---
 
 ## 🎬 What It Does
